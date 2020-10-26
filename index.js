@@ -50,3 +50,13 @@ app.post("/login", async (req, res) => {
 		res.status(400).send({ error: err.message });
 	}
 });
+
+// Logout
+app.post("/logout", (req, res) => {
+	try {
+		console.log(req.user);
+		res.send();
+	} catch (err) {
+		res.status(400).send({ error: err.message });
+	}
+});
