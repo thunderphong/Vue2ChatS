@@ -28,10 +28,18 @@ const userSchema = mongoose.Schema(
 			minlength: 7,
 		},
 		tokens: [{ token: { type: String, required: true } }],
+		namespaces: [],
 		// avatar: { type: Buffer },
 	},
 	{ timestamps: true }
 );
+
+// Set a virtual data where data actually go in to Chat schema
+// userSchema.virtual("chat", {
+// 	ref: "Chat",
+// 	localField: "_id",
+// 	foreignField: "listUser",
+// });
 
 // Reference Methods
 
@@ -77,6 +85,14 @@ userSchema.statics.findByCredentialsForLogin = async (email, password) => {
 
 	const isMatch = await bcrypt.compare(password, user.password);
 	if (!isMatch) throw new Error("Unable to login - Password");
+
+	return user;
+};
+
+// Find credentials with username
+userSchema.statics.findCredentialsWithUsername = async (username) => {
+	const user = await User.findOne({ username });
+	if (!user) throw new Error("No user have username:", username);
 
 	return user;
 };
