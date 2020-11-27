@@ -28,7 +28,10 @@ app.get("/", (req, res) => {
 app.post("/register", async (req, res) => {
 	const user = new User(req.body);
 	try {
-		const cred = await User.findByCredentials(req.body.username, req.body.email);
+		const cred = await User.findByCredentials(
+			req.body.username,
+			req.body.email
+		);
 		if (cred != "") throw new Error(cred);
 		await user.save();
 		res.status(201).send({ user });
@@ -40,7 +43,10 @@ app.post("/register", async (req, res) => {
 // Login
 app.post("/login", async (req, res) => {
 	try {
-		const user = await User.findByCredentialsForLogin(req.body.email, req.body.password);
+		const user = await User.findByCredentialsForLogin(
+			req.body.email,
+			req.body.password
+		);
 		const token = await user.generateAuthToken();
 		res.send({ token, user });
 	} catch (err) {
@@ -65,6 +71,16 @@ app.post("/logout", async (req, res) => {
 	}
 });
 
+// Get all user
+app.get("/user", async (req, res) => {
+	try {
+		const userArray = await User.find({}, "_id username");
+		res.status(201).send(userArray);
+	} catch (err) {
+		res.status(400).send({ error: err.message });
+	}
+});
+
 // namespace
 
 // Add namespace. Params need: { namespace*, user }
@@ -73,17 +89,22 @@ app.post("/addNamespace", async (req, res) => {
 		// Check Namespace
 		const isExist = await Chat.findNameSpace(req.body.namespace);
 		if (isExist != "") throw new Error(isExist);
+		const namespace = new Chat({ namespace: req.body.namespace });
 
-		// Check user
-		const userData = await User.findCredentialsWithUsername(req.body.user.username);
-		const namespace = new Chat(req.body);
-		await namespace.addUserToListUser(
-			{
-				id: userData._id,
-				username: userData.username,
-			},
-			req.body.namespace
-		);
+		// User
+		for (user of req.body.listUser) {
+			const userData = await User.findCredentialsWithUsername(
+				user.username
+			);
+			await namespace.addUserToListUser(
+				{
+					id: userData._id,
+					username: userData.username,
+				},
+				req.body.namespace
+			);
+		}
+		await namespace.save();
 		res.status(201).json(namespace);
 	} catch (err) {
 		res.status(400).send({ error: err.message });
@@ -93,8 +114,12 @@ app.post("/addNamespace", async (req, res) => {
 // Add user to namespace. Params need: { namespace, user }
 app.post("/addUserToNamespace", async (req, res) => {
 	try {
-		const namespace = await Chat.findOne({ namespace: req.body.namespace });
-		const userData = await User.findCredentialsWithUsername(req.body.user.username);
+		const namespace = await Chat.findOne({
+			namespace: req.body.namespace,
+		});
+		const userData = await User.findCredentialsWithUsername(
+			req.body.user.username
+		);
 
 		if (!namespace) throw new Error("Namespace not found!");
 		await namespace.addUserToListUser(
@@ -113,7 +138,9 @@ app.post("/addUserToNamespace", async (req, res) => {
 // Add dialog to namespace. Params need: { namespace, username, message }
 app.post("/dialog", async (req, res) => {
 	try {
-		const namespace = await Chat.findOne({ namespace: req.body.namespace });
+		const namespace = await Chat.findOne({
+			namespace: req.body.namespace,
+		});
 		const data = {
 			username: req.body.username,
 			message: req.body.message,
@@ -151,7 +178,9 @@ app.get("/getNamespaceOfMe/:username", async (req, res) => {
 // Get user list of a namespace.
 app.get("/getUserList/:namespace", async (req, res) => {
 	try {
-		const namespace = await Chat.findOne({ namespace: req.params.namespace });
+		const namespace = await Chat.findOne({
+			namespace: req.params.namespace,
+		});
 		if (namespace) res.status(201).json(namespace.listUser);
 		else return res.status(400).send("Not found namespace");
 	} catch (err) {
@@ -162,7 +191,9 @@ app.get("/getUserList/:namespace", async (req, res) => {
 // Get Dialog from a namespace
 app.get("/getDialogOfNamespace/:namespace", async (req, res) => {
 	try {
-		const room = await Chat.findOne({ namespace: req.params.namespace });
+		const room = await Chat.findOne({
+			namespace: req.params.namespace,
+		});
 		if (room) res.status(201).send(room.chatDialog);
 		else throw new Error("Khong tim thay namespace");
 	} catch (err) {
@@ -197,7 +228,10 @@ for (const nps of nameArray) {
 	const name = io.of("/" + nps);
 
 	name.on("connection", (socket) => {
-		console.log("A user has entered namespace " + nps + ", id:", socket.id);
+		console.log(
+			"A user has entered namespace " + nps + ", id:",
+			socket.id
+		);
 
 		// socket.on("SEND_MESSAGE", (userObject) => {
 		// 	io.of(nps).emit("MESSAGE", {
@@ -210,7 +244,13 @@ for (const nps of nameArray) {
 
 		socket.on("SEND_HELLO", (message) => {
 			namespaceUserNums++;
-			console.log("SEND_HeLLO", message, nps, "Num:", namespaceUserNums);
+			console.log(
+				"SEND_HeLLO",
+				message,
+				nps,
+				"Num:",
+				namespaceUserNums
+			);
 			io.of(nps).emit("HELLO", message);
 		});
 
